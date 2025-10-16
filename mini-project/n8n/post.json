@@ -1,0 +1,302 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// ตรวจสอบ input\nconst body = $json.body;\n\nif (!body || !body.vehicle_type || !body.direction || !body.count || !body.token || !body.camera_id) {\n  throw new Error('Invalid input - missing required fields');\n}\n\nreturn { \n  vehicle_type: body.vehicle_type,\n  direction: body.direction,\n  count: body.count,\n  token: body.token,\n  camera_id: body.camera_id\n};"
+      },
+      "id": "255261b6-930c-423c-947f-01ef54094bfd",
+      "name": "ตรวจสอบ Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -384,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id as vehicle_type_id FROM VehicleType WHERE name = '{{ $json.vehicle_type }}';",
+        "options": {}
+      },
+      "id": "dc66c7f0-fffe-4142-907e-bdb02131fec6",
+      "name": "หา VehicleType",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        624
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "ZIBHThjC92iWkMch",
+          "name": "MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id as direction_type_id FROM DirectionType WHERE name = '{{ $json.direction }}';",
+        "options": {}
+      },
+      "id": "1342fadd-dd26-4783-9375-68addb58dcff",
+      "name": "หา DirectionType",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        832
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "ZIBHThjC92iWkMch",
+          "name": "MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id as edge_device_id FROM EdgeDevice WHERE token = '{{ $json.token }}';",
+        "options": {}
+      },
+      "id": "422ee2e2-2e01-44fd-97bd-4963331d0276",
+      "name": "หา EdgeDevice",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        1008
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "ZIBHThjC92iWkMch",
+          "name": "MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id as camera_id FROM Camera WHERE id = {{ $json.camera_id }};",
+        "options": {}
+      },
+      "id": "317d8bbd-8b96-4abd-96b3-3baee4d2613d",
+      "name": "หา Camera",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        1184
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "ZIBHThjC92iWkMch",
+          "name": "MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// รวมข้อมูลจากทุก node โดยใช้ชื่อ node\nconst originalData = $(\"ตรวจสอบ Input\").first().json; \nconst vehicleTypeData = $(\"หา VehicleType\").first().json; \nconst directionTypeData = $(\"หา DirectionType\").first().json; \nconst edgeDeviceData = $(\"หา EdgeDevice\").first().json;\nconst cameraData = $(\"หา Camera\").first().json;\n\n// ตรวจสอบข้อมูลพื้นฐาน\nif (!originalData) {\n  throw new Error('Missing original data from validate-input');\n}\n\n// ตรวจสอบข้อมูลแต่ละประเภท\nif (!vehicleTypeData || vehicleTypeData.length === 0) {\n  throw new Error(`Invalid vehicle type: ${originalData.vehicle_type}`);\n}\n\nif (!directionTypeData || directionTypeData.length === 0) {\n  throw new Error(`Invalid direction: ${originalData.direction}`);\n}\n\nif (!edgeDeviceData || edgeDeviceData.length === 0) {\n  throw new Error('Invalid or missing device token');\n}\n\nif (!cameraData || cameraData.length === 0) {\n  throw new Error(`Invalid camera_id: ${originalData.camera_id}`);\n}\n\n// ส่งข้อมูลที่ต้องการสำหรับ insert\nreturn {\n  edge_device_id: edgeDeviceData.edge_device_id,\n  camera_id: cameraData.camera_id,\n  vehicle_type_id: vehicleTypeData.vehicle_type_id,\n  direction_type_id: directionTypeData.direction_type_id,\n  count: originalData.count\n};"
+      },
+      "id": "134366a9-526b-4b42-9440-7930ca3b514f",
+      "name": "รวมข้อมูล",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO DetectionRecord (edge_device_id, camera_id, vehicle_type_id, direction_type_id, count, time) VALUES ({{ $json.edge_device_id }}, {{ $json.camera_id }}, {{ $json.vehicle_type_id }}, {{ $json.direction_type_id }}, {{ $json.count }}, NOW());",
+        "options": {}
+      },
+      "id": "75dd1774-ed72-4b44-a3cc-229d90d2faa2",
+      "name": "บันทึกข้อมูล",
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2,
+      "position": [
+        544,
+        912
+      ],
+      "credentials": {
+        "mySql": {
+          "id": "ZIBHThjC92iWkMch",
+          "name": "MySQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "3473c4a0-ffd8-451c-a59a-e705cff3fd27",
+      "name": "ส่งผลลัพธ์สำเร็จ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        704,
+        912
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vehicle_count",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "de6c65df-1d8d-4f9f-9391-d1124f283af4",
+      "name": "POST /vehicle_count1",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        912
+      ],
+      "webhookId": "3382a370-7878-4512-bd35-db9ecc909d87"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        192,
+        880
+      ],
+      "id": "16912d4e-1506-45e2-975b-9506b51a8b63",
+      "name": "Merge1"
+    }
+  ],
+  "connections": {
+    "ตรวจสอบ Input": {
+      "main": [
+        [
+          {
+            "node": "หา VehicleType",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "หา DirectionType",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "หา EdgeDevice",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "หา Camera",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "หา VehicleType": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "หา DirectionType": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "หา EdgeDevice": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "หา Camera": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "รวมข้อมูล": {
+      "main": [
+        [
+          {
+            "node": "บันทึกข้อมูล",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "บันทึกข้อมูล": {
+      "main": [
+        [
+          {
+            "node": "ส่งผลลัพธ์สำเร็จ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /vehicle_count1": {
+      "main": [
+        [
+          {
+            "node": "ตรวจสอบ Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "รวมข้อมูล",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b88cc5fd85709ffe33d9b31950741e30a799267a90a4d7be0cc43021d42c8434"
+  }
+}
